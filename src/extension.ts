@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { recordHit } from './reviewPrompt';
 import {
   extractFromNvmrc,
   extractFromNodeVersion,
@@ -74,7 +75,7 @@ function lineOfSourceName(name: string): number {
   return match ? Number(match[1]) - 1 : 0;
 }
 
-async function refreshWorkspace(): Promise<void> {
+async function refreshWorkspace(context: vscode.ExtensionContext): Promise<void> {
   diagnostics.clear();
 
   const folders = vscode.workspace.workspaceFolders;
@@ -108,6 +109,10 @@ async function refreshWorkspace(): Promise<void> {
           vscode.DiagnosticSeverity.Warning,
         );
         diagnostic.source = 'Node Version Drift Companion';
+        // A real drift actually flagged for this source -- dedup'd by
+        // file URI + line so re-scanning on every watcher refresh
+        // doesn't inflate the count towards the review prompt.
+        recordHit(context, `${uri.toString()}:${line}`);
         return diagnostic;
       });
     diagnostics.set(uri, diags);
@@ -118,16 +123,16 @@ export function activate(context: vscode.ExtensionContext): void {
   diagnostics = vscode.languages.createDiagnosticCollection('nodeVersionDriftCompanion');
   context.subscriptions.push(diagnostics);
 
-  void refreshWorkspace();
+  void refreshWorkspace(context);
 
   const watcher = vscode.workspace.createFileSystemWatcher(
     '**/{.nvmrc,.node-version,.tool-versions,package.json,Dockerfile,.github/workflows/*.yml,.github/workflows/*.yaml}',
   );
   context.subscriptions.push(
     watcher,
-    watcher.onDidChange(() => void refreshWorkspace()),
-    watcher.onDidCreate(() => void refreshWorkspace()),
-    watcher.onDidDelete(() => void refreshWorkspace()),
+    watcher.onDidChange(() => void refreshWorkspace(context)),
+    watcher.onDidCreate(() => void refreshWorkspace(context)),
+    watcher.onDidDelete(() => void refreshWorkspace(context)),
   );
 }
 
