@@ -2,7 +2,7 @@
   "name": "node-version-drift-companion",
   "displayName": "Node Version Drift Companion",
   "description": "Flags when .nvmrc/.node-version/package.json engines.node/Dockerfile/CI disagree on the Node.js version. No data leaves your editor.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "GapHunterLabs",
   "icon": "images/icon.png",
   "license": "Apache-2.0",
